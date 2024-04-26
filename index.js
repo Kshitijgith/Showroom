@@ -1,0 +1,269 @@
+const express=require('express');
+const mongoose=require('mongoose');
+const carss=require('./cars');
+const cors=require('cors');
+const userss=require('./users');
+const bcrypt =require('bcrypt');
+const saltrounds=10;
+const app=express();
+app.use(express.json());
+app.use(cors());
+let logedin=false;
+const usedcar=require('./usedcars');
+const multer = require('multer');
+const path = require('path');
+require('dotenv').config()
+const port=process.env.PORT
+
+//below route is for signup
+{
+app.post('/register', async (req ,res)=>{
+try{
+const {email,password,username}=req.body;
+
+const user=await userss.findOne({email});
+const usrname=await userss.findOne({username});
+if(usrname){
+  return res.json("try another username");
+}
+if(user){
+    return res.json("already registerd");
+}
+const hasedpassword=await  bcrypt.hash(password,saltrounds);
+const newuser= await userss.create({email,password:hasedpassword});
+res.json(newuser);
+logedin=true;
+}
+catch(err){
+res.status(500).json(err)
+}
+});
+}
+
+
+let loggedInUsername = ''//this variable is for checking user is loged in or not
+
+
+//below route is for login
+{   
+app.post('/login',async (req,res)=>{
+try{
+   const {email,password}=req.body;
+   const user=await userss.findOne({email});
+   if(!user){
+    return res.json("no user found");
+   }
+   const hashedpassword = String(user.password);
+   const match = await  bcrypt.compare(password, hashedpassword);
+
+   if(match){
+     loggedInUsername = user.email;
+     res.json("successful")
+     logedin=true;
+   }
+   
+   else{
+    res.json("wrong password")
+   }
+   console.log(logedin);
+
+}
+catch(err){
+res.status(500).json(err);
+}
+});
+}
+
+
+//below route is for updating a login stae when user logouts
+{
+app.post('/logout',async ()=>{
+  try{
+    logedin=false;
+    
+  }
+  catch(error){
+res.send(error);
+  }
+  
+  
+})
+}
+
+
+//below route is for adding different services
+{
+app.post('/service',async (req,res)=>{
+  try{
+    if(logedin===false){
+       return res.json("login")
+    }
+    const user= await userss.findOne({email:loggedInUsername});
+    if(!user){
+      res.json("no user exists");
+
+    }
+    else{
+
+      const newService = {
+        Service: req.body.Service,
+        CarModel: req.body.CarModel,
+        CarNo: req.body.CarNo,
+        Bookingdate: req.body.Bookingdate,
+        PaymentOption: req.body.PaymentOption
+      };
+      user.Services.push(newService);
+
+   
+    await user.save();
+    res.json("booked")}
+  }
+  catch(err){
+    res.status(500).json(err);
+  }
+})
+}
+
+
+//below is multer file setup for uploading file
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, 'uploads/'); // Destination folder for uploaded files
+  },
+  filename: function (req, file, cb) {
+    cb(null, file.originalname); // Use the original filename for uploaded files
+    console.log(req.file);
+  }
+});
+const upload = multer({ storage: storage });
+
+
+//below route is for sellcar which takes inputs from user
+app.post('/sellcar', upload.single('photo'), async (req, res) => {
+  try {
+    if (!logedin) {
+      return res.json("Login");
+    }
+    const user = await userss.findOne({ email: loggedInUsername });
+    if (!user) {
+      return res.json("User not found");
+    }
+    const used = await usedcar.create({
+      carname: req.body.carname,
+      price: req.body.price,
+      Date: req.body.Date,
+      runningkilometres: req.body.runningkilometres,
+      userid: user.id,
+      photo: req.file ? req.file.path : '' // Store the path of the uploaded photo or an empty string if no photo is uploaded
+    });
+    
+    user.carsell = used.id;
+    await user.save();
+    res.json("Used car created successfully");
+  } catch (err) {
+    res.status(500).json(err);
+  }
+})
+
+
+//this route is for showing cars to client from database
+app.post('/cars', async (req, res) => {
+  try {
+     const{Type}=req.body;
+    // const Type = req.body.type.toString();
+   ;
+    
+     
+    
+     const jsonString = JSON.stringify(Type);
+     console.log(typeof(jsonString));
+     console.log(jsonString);
+    const Car = await carss.find();
+    const suvCars = Car[0].SUV;
+    const Sedan=Car[0].Sedan;
+    const  Hatchback=Car[0].Hatchback;
+    const XUV=Car[0].XUV;
+    
+// Assuming Sedan, SUV, etc. are arrays containing car data of respective types
+
+if (jsonString === '{"type":"Sedan"}') {
+  res.json(Sedan); // Send response for Sedan cars
+} else if (jsonString === '{"type":"SUV"}') {
+  res.json(suvCars); // Send response for SUV cars
+} else if (jsonString === '{"type":"Hatchback"}') {
+  res.json(Hatchback); // Send response for Hatchback cars
+} else if (jsonString === '{"type":"XUV"}') {
+  res.json(XUV); // Send response for XUV cars
+} else {
+  // Handle other cases or invalid input
+  res.status(400).json({ error: 'Invalid car type' });
+}
+    
+} catch (error) {
+    console.error('Error finding Hatchback cars:', error);
+}
+    
+});
+
+
+//this route is for showing usedcars from database to client
+app.post('/usedcars', async (req, res) => {
+  try {
+    
+    const Car = await usedcar.find();
+    const carsWithImageURL = Car.map(car => {
+      // Assuming the image file path is stored in the 'photo' field
+      const imagePath = encodeURIComponent(car.photo);
+      const imageURL = `${req.protocol}://${req.get('host')}/${imagePath}`;
+      return {
+          ...car.toObject(),
+          imageURL
+      };
+    });
+    
+  
+  res.json(carsWithImageURL);
+  
+} catch (error) {
+  console.error('Error finding used cars:', error);
+  res.status(500).json({ error: 'Internal server error' });
+}
+    
+});
+
+
+//this route is basically sharing state of login to client to check user loged in or not
+app.post('/state', async (req, res) => {
+  try {
+    
+
+console.log(logedin);
+    if(logedin){
+
+      res.json(true);
+     
+
+    }
+    if(!logedin){
+      res.json(false);
+    }
+      
+    }
+    catch (error) {
+      console.error('Error finding used cars:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }});
+    
+   //below route is for showing userdetails to client
+   app.post('/showservice',async(req,res)=>{
+          const user=await userss.find({email:loggedInUsername})
+   res.json(user);
+
+
+
+   })
+
+    //for running server
+app.listen(port,()=>{
+    console.log(`server is running `);
+})
