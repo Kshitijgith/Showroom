@@ -17,6 +17,9 @@ const port=process.env.PORT
 
 //below route is for signup
 {
+  app.post('/',()=>{
+    res.send("welcome");
+  })
 app.post('/register', async (req ,res)=>{
 try{
 const {email,password,username}=req.body;
