@@ -13,8 +13,8 @@ const usedcar=require('./usedcars');
 const multer = require('multer');
 const path = require('path');
 require('dotenv').config()
-const port=process.env.PORT
-
+const port = process.env.PORT || 3000;
+console.log(port);
 //below route is for signup
 {
   app.post('/',()=>{
