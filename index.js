@@ -17,7 +17,7 @@ const port = process.env.PORT || 4000;
 console.log(port);
 //below route is for signup
 {
-  app.post('/', (req, res) => {
+  app.get('/', (req, res) => {
     res.send("welcome");
   });
 app.post('/register', async (req ,res)=>{
