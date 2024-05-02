@@ -12,12 +12,13 @@ let logedin=false;
 const usedcar=require('./usedcars');
 const multer = require('multer');
 const path = require('path');
+const fs = require('fs');
 require('dotenv').config()
 const port = process.env.PORT || 4000;
 console.log(port);
 //below route is for signup
 {
-  app.get('/', (req, res) => {
+  app.post('/', (req, res) => {
     res.send("welcome");
   });
 app.post('/register', async (req ,res)=>{
@@ -214,18 +215,29 @@ app.post('/usedcars', async (req, res) => {
   try {
     
     const Car = await usedcar.find();
-    const carsWithImageURL = Car.map(car => {
+    const carsWithBase64Image = Car.map(car => {
       // Assuming the image file path is stored in the 'photo' field
-      const imagePath = encodeURIComponent(car.photo);
-      const imageURL = `${req.protocol}://${req.get('host')}/${imagePath}`;
+      const imagePath = car.photo; // Assuming imagePath is something like 'images/car1.jpg'
+      
+      // Read the image file synchronously
+      const imageData = fs.readFileSync(imagePath);
+      
+      // Convert image data to Base64
+      const base64Image = Buffer.from(imageData).toString('base64');
+  
+      // Create data URL with Base64-encoded image
+      const imageURL = `data:image/jpeg;base64,${base64Image}`;
+  
       return {
           ...car.toObject(),
           imageURL
       };
-    });
+  });
+  
+  res.json(carsWithBase64Image);
     
   
-  res.json(carsWithImageURL);
+
   
 } catch (error) {
   console.error('Error finding used cars:', error);
@@ -243,12 +255,19 @@ app.post('/state', async (req, res) => {
 console.log(logedin);
     if(logedin){
 
-      res.json(true);
+      res.json({
+        success:true,
+        username:loggedInUsername
+      });
+      
      
 
     }
     if(!logedin){
-      res.json(false);
+      res.json({
+        success:false,
+        username:" "
+      });
     }
       
     }
