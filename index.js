@@ -15,7 +15,9 @@ const path = require('path');
 const fs = require('fs');
 require('dotenv').config()
 const port = process.env.PORT || 4000;
+const bodyParser = require('body-parser');
 console.log(port);
+
 //below route is for signup
 {
   app.post('/', (req, res) => {
@@ -127,23 +129,10 @@ app.post('/service',async (req,res)=>{
   }
 })
 }
+app.use(bodyParser.json({ limit: '50mb' }));
+app.use(bodyParser.urlencoded({ limit: '50mb', extended: true }));
 
-
-//below is multer file setup for uploading file
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, 'uploads/'); // Destination folder for uploaded files
-  },
-  filename: function (req, file, cb) {
-    cb(null, file.originalname); // Use the original filename for uploaded files
-    console.log(req.file);
-  }
-});
-const upload = multer({ storage: storage });
-
-
-//below route is for sellcar which takes inputs from user
-app.post('/sellcar', upload.single('photo'), async (req, res) => {
+app.post('/sellcar', async (req, res) => {
   try {
     if (!logedin) {
       return res.json("Login");
@@ -155,10 +144,12 @@ app.post('/sellcar', upload.single('photo'), async (req, res) => {
     const used = await usedcar.create({
       carname: req.body.carname,
       price: req.body.price,
-      Date: req.body.Date,
+      purchasedate: req.body.purchasedate,
       runningkilometres: req.body.runningkilometres,
       userid: user.id,
-      photo: req.file ? req.file.path : '' // Store the path of the uploaded photo or an empty string if no photo is uploaded
+      photo: req.body.photo
+      // Store the base64 encoded image directly// photo: req.body.photo
+       // Assuming the base64 encoded image is sent in the 'photo' field of the request body
     });
     
     user.carsell = used.id;
@@ -167,7 +158,8 @@ app.post('/sellcar', upload.single('photo'), async (req, res) => {
   } catch (err) {
     res.status(500).json(err);
   }
-})
+});
+
 
 
 //this route is for showing cars to client from database
@@ -215,31 +207,12 @@ app.post('/usedcars', async (req, res) => {
   try {
     
     const Car = await usedcar.find();
-    const carsWithBase64Image = Car.map(car => {
-      // Assuming the image file path is stored in the 'photo' field
-      const imagePath = car.photo; // Assuming imagePath is something like 'images/car1.jpg'
-      
-      // Read the image file synchronously
-      const imageData = fs.readFileSync(imagePath);
-      
-      // Convert image data to Base64
-      const base64Image = Buffer.from(imageData).toString('base64');
-  
-      // Create data URL with Base64-encoded image
-      const imageURL = `data:image/jpeg;base64,${base64Image}`;
-  
-      return {
-          ...car.toObject(),
-          imageURL
-      };
-  });
-  
-  res.json(carsWithBase64Image);
-    
-  
 
+
+    res.json(Car);
+}
   
-} catch (error) {
+ catch (error) {
   console.error('Error finding used cars:', error);
   res.status(500).json({ error: 'Internal server error' });
 }
