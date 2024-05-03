@@ -5,7 +5,6 @@ const usedcar=mongoose.Schema({
         ref: 'usermodel' // Assuming the model name for users is 'User'
     },
         carname:String,
-        purchasedate:Date,
         price:Number,
         runningkilometres:Number,
         photo:String,
