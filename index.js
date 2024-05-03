@@ -144,7 +144,7 @@ app.post('/sellcar', async (req, res) => {
     const used = await usedcar.create({
       carname: req.body.carname,
       price: req.body.price,
-      
+      purchasedate: req.body.purchasedate,
       runningkilometres: req.body.runningkilometres,
       userid: user.id,
       photo: req.body.photo
