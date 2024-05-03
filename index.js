@@ -224,13 +224,13 @@ app.post('/usedcars', async (req, res) => {
 app.post('/state', async (req, res) => {
   try {
     
-
+    
 console.log(logedin);
     if(logedin){
-
+      const user= await userss.findOne({email:loggedInUsername});
       res.json({
         success:true,
-        username:loggedInUsername
+        username:user.username
       });
       
      
