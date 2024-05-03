@@ -130,7 +130,7 @@ app.post('/service',async (req,res)=>{
 })
 }
 app.use(bodyParser.json({ limit: '50mb' }));
-app.use(bodyParser.urlencoded({ limit: '50mb', extended: true }));
+app.use(bodyParser.urlencoded({ limit: '100mb', extended: true }));
 
 app.post('/sellcar', async (req, res) => {
   try {
@@ -224,13 +224,12 @@ app.post('/usedcars', async (req, res) => {
 app.post('/state', async (req, res) => {
   try {
     
-    
+
 console.log(logedin);
     if(logedin){
-      
+
       res.json({
         success:true,
-      
         username:loggedInUsername
       });
       
