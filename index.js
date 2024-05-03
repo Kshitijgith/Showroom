@@ -227,10 +227,11 @@ app.post('/state', async (req, res) => {
     
 console.log(logedin);
     if(logedin){
-      const user= await userss.findOne({email:loggedInUsername});
+      
       res.json({
         success:true,
-        username:user.username
+      
+        username:loggedInUsername
       });
       
      
